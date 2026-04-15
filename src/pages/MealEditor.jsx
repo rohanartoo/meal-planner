@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import useToast from '../hooks/useToast.js';
 
 export default function MealEditor() {
   const navigate = useNavigate();
   const { id } = useParams();
-  
+
   const [ingredients, setIngredients] = useState([]);
   const [form, setForm] = useState({ name: '', description: '', meal_type: 'either', is_favorite: false, ingredient_ids: [] });
-  const [toast, setToast] = useState(null);
+  const { toast, isError, showToast } = useToast();
 
   const [ingInput, setIngInput] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
@@ -20,18 +21,11 @@ export default function MealEditor() {
     }
   }, [id]);
 
-  useEffect(() => {
-    if (toast) {
-      const t = setTimeout(() => setToast(null), 2500);
-      return () => clearTimeout(t);
-    }
-  }, [toast]);
-
   async function fetchMeal(mealId) {
     try {
       const res = await fetch(`/api/meals/${mealId}`);
       if (!res.ok) {
-        setToast('Failed to load recipe from server (ensure backend was restarted)');
+        showToast('Failed to load recipe from server (ensure backend was restarted)');
         return;
       }
       const data = await res.json();
@@ -44,7 +38,7 @@ export default function MealEditor() {
       });
     } catch (err) {
       console.error('Fetch error:', err);
-      setToast('Error loading recipe details');
+      showToast('Error loading recipe details');
     }
   }
 
@@ -59,25 +53,30 @@ export default function MealEditor() {
   ).slice(0, 10);
 
   async function addIngredient(name) {
-    if (!name.trim()) return;
+    if (!name.trim()) return null;
     
     // Check if already exists in main list
     let existing = ingredients.find(i => i.name.toLowerCase() === name.toLowerCase().trim());
     
     if (!existing) {
-      // Create it!
+      // Not found locally — create it on the server (defaults to not in stock)
       try {
         const res = await fetch('/api/ingredients', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: name.trim() })
         });
-        existing = await res.json();
-        // Refresh master list
+        const data = await res.json();
+        if (!res.ok && res.status !== 409) {
+          showToast(data.error || 'Error creating ingredient');
+          return null;
+        }
+        existing = data;
+        // Refresh master list so the new ingredient appears in suggestions
         await fetchIngredients();
       } catch (e) {
-        setToast('Error creating ingredient');
-        return;
+        showToast('Error creating ingredient');
+        return null;
       }
     }
 
@@ -86,6 +85,7 @@ export default function MealEditor() {
     }
     setIngInput('');
     setShowSuggestions(false);
+    return existing.id;
   }
 
   function removeIngredient(ingId) {
@@ -114,13 +114,29 @@ export default function MealEditor() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.name.trim()) {
-      setToast('Meal name is required');
+      showToast('Meal name is required');
       return;
     }
-    if (form.ingredient_ids.length === 0) {
-      setToast('At least one ingredient is required');
+
+    // Auto-add any ingredient text typed but not yet confirmed via Enter
+    // addIngredient returns the id so we can check it without relying on stale state
+    let pendingIngId = null;
+    if (ingInput.trim()) {
+      pendingIngId = await addIngredient(ingInput.trim());
+    }
+
+    // Use pendingIngId as a fallback because setForm is async and
+    // form.ingredient_ids may not have updated yet at this point
+    const hasIngredients = form.ingredient_ids.length > 0 || pendingIngId !== null;
+    if (!hasIngredients) {
+      showToast('At least one ingredient is required');
       return;
     }
+
+    // Build the final ingredient list, including any just-added ingredient
+    const finalIngredientIds = pendingIngId && !form.ingredient_ids.includes(pendingIngId)
+      ? [...form.ingredient_ids, pendingIngId]
+      : form.ingredient_ids;
 
     const url = id ? `/api/meals/${id}` : '/api/meals';
     const method = id ? 'PUT' : 'POST';
@@ -128,13 +144,13 @@ export default function MealEditor() {
     const res = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, ingredient_ids: finalIngredientIds }),
     });
 
     if (res.ok) {
       navigate('/meals');
     } else {
-      setToast('Error saving recipe');
+      showToast('Error saving recipe');
     }
   }
 
@@ -142,14 +158,14 @@ export default function MealEditor() {
 
   return (
     <div className="animate-in">
-      <div className="page-header" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      <div className="page-header page-header--back">
         <button className="btn btn-secondary btn-icon" onClick={() => navigate('/meals')}>←</button>
         <div>
-          <h1 style={{ marginBottom: 0 }}>{id ? 'Edit Recipe' : 'New Recipe'}</h1>
+          <h1>{id ? 'Edit Recipe' : 'New Recipe'}</h1>
         </div>
       </div>
 
-      <div style={{ maxWidth: 800 }}>
+      <div className="form-max-width">
         <form onSubmit={handleSubmit} className="glass-card">
           <div className="form-group">
             <label htmlFor="meal-name">Recipe Name</label>
@@ -226,7 +242,7 @@ export default function MealEditor() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+          <div className="form-actions">
             <button type="submit" className="btn btn-primary" id="save-meal-btn">
               {id ? 'Update Recipe' : 'Save Recipe'}
             </button>
@@ -237,11 +253,7 @@ export default function MealEditor() {
         </form>
       </div>
 
-      {toast && (
-        <div className={`toast ${toast.toLowerCase().includes('required') || toast.toLowerCase().includes('failed') || toast.toLowerCase().includes('error') ? 'error' : ''}`}>
-          {toast}
-        </div>
-      )}
+      {toast && <div className={`toast ${isError ? 'error' : ''}`}>{toast}</div>}
     </div>
   );
 }

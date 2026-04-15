@@ -173,6 +173,21 @@ html, body, #root {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
 }
 
+.glass-card--flush {
+  padding: 0;
+  overflow: hidden;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.meal-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* ── Form elements ───────────────────────────────────────────────── */
 input[type="text"],
 input[type="search"],
@@ -210,7 +225,7 @@ select {
 }
 
 select option {
-  background: var(--bg-secondary);
+  background: var(--bg-card);
   color: var(--text-primary);
 }
 
@@ -658,88 +673,136 @@ label {
 /* ── Meal Tile ───────────────────────────────────────────────────── */
 .meal-tile {
   position: relative;
-  background: var(--bg-card);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
-  border: 1px solid var(--border-glass);
-  border-radius: var(--radius);
-  padding: 16px 14px;
-  min-height: 100px;
+  border-radius: var(--radius-lg);
+  padding: 18px 16px 14px;
+  min-height: 110px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-end;
   transition: all 0.25s var(--ease);
   overflow: hidden;
+  border: none;
 }
 
-.meal-tile::before {
-  content: '';
+.meal-tile.lunch-tile {
+  background: #F5EBD8;
+  box-shadow: 0 2px 8px rgba(163, 124, 64, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.meal-tile.dinner-tile {
+  background: #EFE4DC;
+  box-shadow: 0 2px 8px rgba(140, 76, 56, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.meal-tile--empty {
+  background: var(--bg-glass) !important;
+  box-shadow: none !important;
+  border: 1px dashed var(--border-glass);
+  justify-content: center;
+}
+
+.meal-tile--aspirational {
+  border: 1.5px dashed rgba(180, 95, 68, 0.35);
+  box-shadow: none !important;
+}
+
+.meal-tile:not(.meal-tile--empty):hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.meal-tile.lunch-tile:not(.meal-tile--empty):hover {
+  box-shadow: 0 8px 24px rgba(163, 124, 64, 0.15);
+}
+
+.meal-tile.dinner-tile:not(.meal-tile--empty):hover {
+  box-shadow: 0 8px 24px rgba(140, 76, 56, 0.15);
+}
+
+.meal-tile-shop-badge {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  border-radius: var(--radius) var(--radius) 0 0;
+  top: 8px;
+  left: 36px;
+  font-size: 0.72rem;
+  line-height: 1;
+  opacity: 0.75;
 }
 
-.meal-tile.lunch-tile::before {
-  background: linear-gradient(90deg, var(--lunch-color), transparent);
+.meal-tile-favorite {
+  position: absolute;
+  top: 8px;
+  left: 36px;
+  color: var(--accent);
+  font-size: 0.8rem;
+  line-height: 1;
 }
 
-.meal-tile.dinner-tile::before {
-  background: linear-gradient(90deg, var(--dinner-color), transparent);
-}
-
-.meal-tile:hover {
-  border-color: rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+/* When both shop badge and favorite coexist, shift favorite further right */
+.meal-tile--aspirational .meal-tile-favorite {
+  left: 56px;
 }
 
 .meal-tile-name {
+  font-family: 'Playfair Display', serif;
   font-weight: 600;
-  font-size: 0.88rem;
-  line-height: 1.3;
+  font-size: 0.92rem;
+  line-height: 1.25;
   color: var(--text-primary);
-  margin-top: 4px;
 }
-
-.meal-tile-favorite-star {
-  color: var(--accent);
-  font-size: 0.95rem;
-  vertical-align: middle;
-}
-
 
 .meal-tile-empty {
   color: var(--text-muted);
   font-size: 0.82rem;
   font-style: italic;
+  text-align: center;
 }
 
 .meal-tile-ingredients {
   display: flex;
   flex-wrap: wrap;
-  gap: 3px;
+  gap: 4px;
   margin-top: 8px;
 }
 
 .meal-tile-ingredient {
   font-size: 0.68rem;
-  padding: 1px 6px;
+  padding: 2px 7px;
   border-radius: 8px;
-  background: var(--bg-glass);
-  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.lunch-tile .meal-tile-ingredient {
+  background: rgba(163, 124, 64, 0.1);
+  color: var(--lunch-color);
+}
+
+.dinner-tile .meal-tile-ingredient {
+  background: rgba(140, 76, 56, 0.1);
+  color: var(--dinner-color);
+}
+
+/* Missing (out-of-stock) ingredient chips — muted with a strikethrough hint */
+.meal-tile-ingredient--missing {
+  opacity: 0.55;
+  text-decoration: line-through;
+  font-style: italic;
+}
+
+.meal-tile-ingredient--more {
+  opacity: 0.6;
+  font-style: italic;
 }
 
 .swap-btn {
   position: absolute;
   top: 8px;
   right: 8px;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.06);
   color: var(--text-muted);
   cursor: pointer;
   display: flex;
@@ -748,6 +811,7 @@ label {
   font-size: 0.85rem;
   opacity: 0;
   transition: all 0.2s var(--ease);
+  backdrop-filter: blur(4px);
 }
 
 .meal-tile:hover .swap-btn {
@@ -755,10 +819,111 @@ label {
 }
 
 .swap-btn:hover {
-  background: var(--accent-glow);
-  border-color: var(--accent);
-  color: var(--accent-hover);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--accent);
   transform: rotate(90deg);
+}
+
+/* ── Lock button ─────────────────────────────────────────────────── */
+.lock-btn {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  opacity: 0;
+  transition: all 0.2s var(--ease);
+  backdrop-filter: blur(4px);
+  line-height: 1;
+}
+
+.meal-tile:hover .lock-btn,
+.meal-tile--locked .lock-btn {
+  opacity: 1;
+}
+
+.lock-btn:hover {
+  background: rgba(255, 255, 255, 0.9);
+  transform: scale(1.1);
+}
+
+/* ── Locked tile ─────────────────────────────────────────────────── */
+.meal-tile--locked {
+  border: 1.5px solid rgba(180, 95, 68, 0.4) !important;
+  box-shadow: 0 0 0 3px rgba(180, 95, 68, 0.06) !important;
+}
+
+.meal-tile--locked::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.18);
+  pointer-events: none;
+}
+
+/* Locked tiles should not lift on hover */
+.meal-tile--locked:hover {
+  transform: none !important;
+}
+
+/* ── Grocery list ───────────────────────────────────────────────── */
+.grocery-section {
+  width: 100%;
+  max-width: 480px;
+  margin: 32px auto 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.grocery-list {
+  width: 100%;
+}
+
+.grocery-list h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text-primary);
+}
+
+.grocery-subtitle {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.grocery-list ul {
+  list-style: none;
+  columns: 2;
+  column-gap: 24px;
+}
+
+.grocery-list li {
+  padding: 6px 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-glass);
+  break-inside: avoid;
+}
+
+.grocery-list li::before {
+  content: '○';
+  margin-right: 8px;
+  color: var(--text-muted);
+  font-size: 0.7rem;
 }
 
 /* ── Empty states ────────────────────────────────────────────────── */
@@ -776,6 +941,57 @@ label {
 
 .empty-state-text {
   font-size: 0.95rem;
+}
+
+/* ── Page header variants ───────────────────────────────────────── */
+.page-header--row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.page-header--center {
+  text-align: center;
+  width: 100%;
+}
+
+.page-header--back {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.page-header--back h1 {
+  margin-bottom: 0;
+}
+
+/* ── Search bar (full-width) ────────────────────────────────────── */
+.search-bar {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 1.05rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-glass);
+  background: var(--bg-glass);
+  margin-bottom: 24px;
+}
+
+/* ── Form layout helpers ────────────────────────────────────────── */
+.form-max-width {
+  max-width: 800px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+/* ── Meal description in table ──────────────────────────────────── */
+.meal-description {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 2px;
 }
 
 /* ── Search filter ───────────────────────────────────────────────── */
@@ -808,6 +1024,12 @@ label {
     transform: translateY(0);
   }
 }
+
+@keyframes card-flip-in {
+  0%   { transform: perspective(600px) rotateY(-90deg); opacity: 0; }
+  40%  { opacity: 1; }
+  100% { transform: perspective(600px) rotateY(0deg); }
+}
 @keyframes fadeInDown {
   from {
     opacity: 0;
@@ -825,12 +1047,9 @@ label {
   to { opacity: 1; }
 }
 
-.animate-in {
-  animation: fadeInUp 0.35s var(--ease) both;
-}
-
+.animate-in,
 .meal-tile {
-  animation: fadeInUp 0.35s var(--ease) both;
+  animation: card-flip-in 0.35s var(--ease) both;
 }
 
 /* Stagger tile animations */
@@ -917,7 +1136,7 @@ label {
   border-radius: 20px;
   font-size: 0.82rem;
   font-weight: 500;
-  border: 1px solid rgba(26, 54, 93, 0.1);
+  border: 1px solid rgba(180, 95, 68, 0.15);
 }
 
 .ingredient-tag-remove {
@@ -966,8 +1185,8 @@ label {
     min-width: 72px;
     padding: 20px 10px;
   }
-  .sidebar-logo span:last-child,
-  .sidebar a span:last-child {
+  .sidebar-logo span,
+  .sidebar a span:not(.sidebar-icon) {
     display: none;
   }
   .sidebar a {
@@ -980,5 +1199,134 @@ label {
   }
   .main-content {
     padding: 28px 24px;
+  }
+}
+
+/* ── Mobile: bottom nav + stacked layout ────────────────────────── */
+@media (max-width: 640px) {
+  .app-layout {
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  .sidebar {
+    order: 2;
+    width: 100%;
+    min-width: unset;
+    flex-direction: row;
+    padding: 0;
+    gap: 0;
+    border-right: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    height: 60px;
+    align-items: center;
+    justify-content: space-around;
+  }
+
+  .sidebar-logo {
+    display: none;
+  }
+
+  .sidebar a {
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 12px;
+    font-size: 0.7rem;
+    border-radius: 0;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .sidebar a.active::before {
+    top: 0;
+    bottom: unset;
+    left: 20%;
+    right: 20%;
+    width: auto;
+    height: 2px;
+    border-radius: 0 0 3px 3px;
+  }
+
+  .sidebar .sidebar-icon {
+    font-size: 1.3rem;
+  }
+
+  .main-content {
+    order: 1;
+    padding: 20px 16px 80px;
+    height: calc(100vh - 60px);
+  }
+
+  .page-header h1 {
+    font-size: 1.5rem;
+  }
+
+  /* Meal grid: horizontal scroll per row */
+  .meal-grid {
+    overflow: visible;
+  }
+
+  .grid-header {
+    display: none;
+  }
+
+  .grid-row {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+  }
+
+  .grid-row-label {
+    min-width: 50px;
+    font-size: 0.72rem;
+  }
+
+  .meal-tile {
+    min-width: 140px;
+    max-width: 160px;
+    flex-shrink: 0;
+    scroll-snap-align: start;
+    min-height: 90px;
+  }
+
+  .meal-tile .swap-btn {
+    opacity: 1;
+  }
+
+  .generate-section {
+    padding: 32px 0;
+  }
+
+  .generate-btn {
+    padding: 14px 32px;
+    font-size: 1.1rem;
+  }
+
+  /* Stock list single column */
+  .stock-list {
+    grid-template-columns: 1fr;
+  }
+
+  .stock-item-delete {
+    opacity: 1;
+  }
+
+  /* Table scroll */
+  .meals-table {
+    font-size: 0.85rem;
+  }
+
+  .meal-actions {
+    flex-direction: column;
+    gap: 4px;
   }
 }

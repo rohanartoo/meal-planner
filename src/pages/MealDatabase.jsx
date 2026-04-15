@@ -1,33 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import useToast from '../hooks/useToast.js';
 
 export default function MealDatabase() {
   const navigate = useNavigate();
   const [meals, setMeals] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [toast, setToast] = useState(null);
+  const { toast, isError, showToast } = useToast();
 
   useEffect(() => {
     fetchMeals();
   }, []);
 
-  useEffect(() => {
-    if (toast) {
-      const t = setTimeout(() => setToast(null), 2500);
-      return () => clearTimeout(t);
-    }
-  }, [toast]);
-
   async function fetchMeals() {
-    const res = await fetch('/api/meals');
-    setMeals(await res.json());
+    try {
+      const res = await fetch('/api/meals');
+      setMeals(await res.json());
+    } catch {
+      showToast('Failed to load recipes — is the server running?');
+    }
   }
 
   async function deleteMeal(id) {
     if (window.confirm('Are you sure you want to delete this recipe?')) {
       await fetch(`/api/meals/${id}`, { method: 'DELETE' });
       fetchMeals();
-      setToast('Recipe deleted');
+      showToast('Recipe deleted');
     }
   }
 
@@ -39,7 +37,7 @@ export default function MealDatabase() {
       body: JSON.stringify({ is_favorite: newStatus })
     });
     setMeals(prev => prev.map(m => m.id === meal.id ? { ...m, is_favorite: newStatus } : m));
-    setToast(newStatus ? 'Added to favorites' : 'Removed from favorites');
+    showToast(newStatus ? 'Added to favorites' : 'Removed from favorites');
   }
 
   const typeLabel = (t) => {
@@ -61,7 +59,7 @@ export default function MealDatabase() {
 
   return (
     <div className="animate-in">
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="page-header page-header--row">
         <div>
           <h1>Recipe Library</h1>
           <p>{meals.length} recipes in your collection</p>
@@ -74,29 +72,29 @@ export default function MealDatabase() {
         </button>
       </div>
 
-      <div style={{ marginBottom: '24px' }}>
-        <input 
-          type="text" 
-          placeholder="Search recipes or ingredients..." 
-          style={{ width: '100%', padding: '12px 16px', fontSize: '1.05rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-glass)', background: 'var(--bg-glass)' }}
+      <div>
+        <input
+          type="text"
+          placeholder="Search recipes or ingredients..."
+          className="search-bar"
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
         />
       </div>
 
-      <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="glass-card glass-card--flush">
         {meals.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon">🍽</div>
             <div className="empty-state-text">No recipes yet. Add your first recipe!</div>
           </div>
         ) : filteredMeals.length === 0 ? (
-          <div className="empty-state" style={{ padding: '60px 20px' }}>
-            <div className="empty-state-icon" style={{ opacity: 0.5 }}>🔍</div>
+          <div className="empty-state">
+            <div className="empty-state-icon">🔍</div>
             <div className="empty-state-text">No recipes matched "{searchQuery}"</div>
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="table-scroll">
             <table className="meals-table">
               <thead>
                 <tr>
@@ -109,7 +107,7 @@ export default function MealDatabase() {
               <tbody>
                 {filteredMeals.map(meal => (
                   <tr key={meal.id} id={`meal-row-${meal.id}`}>
-                    <td style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <td className="meal-name-cell">
                       <button 
                         className={`favorite-btn ${meal.is_favorite ? 'active' : ''}`} 
                         onClick={() => toggleFavorite(meal)}
@@ -120,7 +118,7 @@ export default function MealDatabase() {
                       <div>
                         <strong>{meal.name}</strong>
                         {meal.description && (
-                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                          <div className="meal-description">
                             {meal.description}
                           </div>
                         )}
@@ -133,7 +131,7 @@ export default function MealDatabase() {
                           <span key={ing.id} className="meal-ingredient-tag">{ing.name}</span>
                         ))}
                         {meal.ingredients.length === 0 && (
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>No ingredients</span>
+                          <span className="meal-description">No ingredients</span>
                         )}
                       </div>
                     </td>
@@ -163,11 +161,7 @@ export default function MealDatabase() {
         )}
       </div>
 
-      {toast && (
-        <div className={`toast ${toast.toLowerCase().includes('error') ? 'error' : ''}`}>
-          {toast}
-        </div>
-      )}
+      {toast && <div className={`toast ${isError ? 'error' : ''}`}>{toast}</div>}
     </div>
   );
 }

@@ -14,12 +14,15 @@ export default function App() {
             <span>Nourish</span>
           </div>
           <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>
+            <span className="sidebar-icon">📅</span>
             <span>Weekly Menu</span>
           </NavLink>
           <NavLink to="/meals" className={({ isActive }) => isActive ? 'active' : ''}>
+            <span className="sidebar-icon">📖</span>
             <span>Recipe Library</span>
           </NavLink>
           <NavLink to="/ingredients" className={({ isActive }) => isActive ? 'active' : ''}>
+            <span className="sidebar-icon">🥬</span>
             <span>My Pantry</span>
           </NavLink>
         </nav>

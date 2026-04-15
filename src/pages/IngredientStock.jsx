@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import useToast from '../hooks/useToast.js';
 
 export default function IngredientStock() {
   const [ingredients, setIngredients] = useState([]);
   const [newName, setNewName] = useState('');
   const [search, setSearch] = useState('');
-  const [toast, setToast] = useState(null);
-  
+  const { toast, isError, showToast } = useToast();
+
   const [activeIndex, setActiveIndex] = useState(0);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -13,30 +14,22 @@ export default function IngredientStock() {
     fetchIngredients();
   }, []);
 
-  useEffect(() => {
-    if (toast) {
-      const t = setTimeout(() => setToast(null), 2500);
-      return () => clearTimeout(t);
-    }
-  }, [toast]);
-
   async function fetchIngredients() {
-    const res = await fetch('/api/ingredients');
-    setIngredients(await res.json());
+    try {
+      const res = await fetch('/api/ingredients');
+      setIngredients(await res.json());
+    } catch {
+      showToast('Failed to load ingredients — is the server running?');
+    }
   }
 
-  async function addIngredientFromSuggestion(name) {
-    setNewName(name);
-    setShowSuggestions(false);
-  }
-
-  async function addIngredient(e) {
+  async function addIngredient(e, nameOverride) {
     if (e) e.preventDefault();
-    const cleanName = newName.trim();
+    const cleanName = (nameOverride ?? newName).trim();
     if (!cleanName) return;
 
     if (ingredients.some(i => i.name.toLowerCase() === cleanName.toLowerCase())) {
-      setToast('This ingredient already exists in your pantry!');
+      showToast('This ingredient already exists in your pantry!');
       setShowSuggestions(false);
       return;
     }
@@ -50,10 +43,10 @@ export default function IngredientStock() {
       setNewName('');
       setShowSuggestions(false);
       fetchIngredients();
-      setToast('Ingredient added!');
+      showToast('Ingredient added!');
     } else {
       const data = await res.json();
-      setToast(data.error || 'Error');
+      showToast(data.error || 'Error');
     }
   }
 
@@ -69,9 +62,22 @@ export default function IngredientStock() {
   }
 
   async function deleteIngredient(id) {
+    if (!window.confirm('Remove this ingredient? It will also be removed from any recipes using it.')) return;
     await fetch(`/api/ingredients/${id}`, { method: 'DELETE' });
     setIngredients(prev => prev.filter(i => i.id !== id));
-    setToast('Ingredient removed');
+    showToast('Ingredient removed');
+  }
+
+  async function markAllStock(inStock) {
+    await Promise.all(ingredients.map(ing =>
+      fetch(`/api/ingredients/${ing.id}/stock`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ in_stock: inStock }),
+      })
+    ));
+    setIngredients(prev => prev.map(i => ({ ...i, in_stock: inStock })));
+    showToast(inStock ? 'All marked in stock' : 'All marked out of stock');
   }
 
   const suggestions = ingredients.filter(ing => 
@@ -88,7 +94,7 @@ export default function IngredientStock() {
     } else if (e.key === 'Enter') {
       if (showSuggestions && suggestions[activeIndex]) {
         e.preventDefault();
-        addIngredientFromSuggestion(suggestions[activeIndex].name);
+        await addIngredient(e, suggestions[activeIndex].name);
       }
     } else if (e.key === 'Escape') {
       setShowSuggestions(false);
@@ -111,7 +117,7 @@ export default function IngredientStock() {
       </div>
 
       <form onSubmit={addIngredient} className="stock-controls">
-        <div className="ingredient-input-wrapper" style={{ flex: 1, marginBottom: 0 }}>
+        <div className="ingredient-input-wrapper" style={{ flex: 1 }}>
           <input
             type="text"
             placeholder="Add a new ingredient..."
@@ -127,12 +133,12 @@ export default function IngredientStock() {
             autoComplete="off"
           />
           {showSuggestions && newName.trim() && suggestions.length > 0 && (
-            <div className="suggestions-list" style={{ top: 'calc(100% + 4px)' }}>
+            <div className="suggestions-list">
               {suggestions.map((s, idx) => (
                 <div
                   key={s.id}
                   className={`suggestion-item ${idx === activeIndex ? 'active' : ''}`}
-                  onClick={() => addIngredientFromSuggestion(s.name)}
+                  onClick={() => addIngredient(null, s.name)}
                 >
                   {s.name}
                 </div>
@@ -145,17 +151,21 @@ export default function IngredientStock() {
         </button>
       </form>
 
-      {ingredients.length > 5 && (
+      {ingredients.length > 0 && (
         <div className="stock-controls">
-          <div className="search-input" style={{ flex: 1 }}>
-            <input
-              type="search"
-              placeholder="Search ingredients..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              id="search-ingredients"
-            />
-          </div>
+          {ingredients.length > 5 && (
+            <div className="search-input" style={{ flex: 1 }}>
+              <input
+                type="search"
+                placeholder="Search ingredients..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                id="search-ingredients"
+              />
+            </div>
+          )}
+          <button className="btn btn-secondary btn-sm" onClick={() => markAllStock(true)}>All In Stock</button>
+          <button className="btn btn-secondary btn-sm" onClick={() => markAllStock(false)}>All Out</button>
         </div>
       )}
 
@@ -194,11 +204,7 @@ export default function IngredientStock() {
         </div>
       )}
 
-      {toast && (
-        <div className={`toast ${toast.toLowerCase().includes('already exists') || toast.toLowerCase().includes('error') ? 'error' : ''}`}>
-          {toast}
-        </div>
-      )}
+      {toast && <div className={`toast ${isError ? 'error' : ''}`}>{toast}</div>}
     </div>
   );
 }
