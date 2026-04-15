@@ -206,36 +206,38 @@ app.patch('/api/meals/:id/favorite', async (req, res) => {
 // MEAL PLAN GENERATION
 // ═══════════════════════════════════════════════════════════════════
 
-// Helper: get all cookable meals (every ingredient in stock), optionally filtered by type
-async function getCookableMeals(typeFilter = null) {
-  // Get meals where ALL required ingredients are in stock
-  // A meal with 0 ingredients is always cookable
+// Helper: get all meals with stock info, optionally filtered by meal type.
+// Returns each meal annotated with:
+//   cookable: boolean           — true when every ingredient is in stock
+//   ingredients: [{id, name}]   — full ingredient list
+//   missingIngredients: [{id, name}] — subset that are out of stock
+async function getAllMealsWithStockInfo(typeFilter = null) {
   const allMeals = await db.all('SELECT * FROM meals');
-  const cookable = [];
+  const result = [];
 
   for (const meal of allMeals) {
     if (typeFilter && meal.meal_type !== typeFilter && meal.meal_type !== 'either') continue;
 
     const ingredients = await db.all(
-      `SELECT i.in_stock FROM ingredients i
+      `SELECT i.id, i.name, i.in_stock FROM ingredients i
        INNER JOIN meal_ingredients mi ON mi.ingredient_id = i.id
        WHERE mi.meal_id = $1`,
       [meal.id]
     );
 
-    // All ingredients must be in stock (or meal has no ingredients)
-    const allInStock = ingredients.every(i => !!i.in_stock);
-    if (allInStock) {
-      const fullIngredients = await db.all(
-        `SELECT i.id, i.name FROM ingredients i
-         INNER JOIN meal_ingredients mi ON mi.ingredient_id = i.id
-         WHERE mi.meal_id = $1`,
-        [meal.id]
-      );
-      cookable.push({ ...meal, ingredients: fullIngredients });
-    }
+    const missingIngredients = ingredients
+      .filter(i => !i.in_stock)
+      .map(i => ({ id: i.id, name: i.name }));
+
+    result.push({
+      ...meal,
+      is_favorite: !!meal.is_favorite,
+      cookable: missingIngredients.length === 0,
+      ingredients: ingredients.map(i => ({ id: i.id, name: i.name })),
+      missingIngredients,
+    });
   }
-  return cookable;
+  return result;
 }
 
 // Shuffle array (Fisher-Yates)
@@ -249,43 +251,68 @@ function shuffle(arr) {
 }
 
 // GET /api/meal-plan/generate
+// Mon/Tue/Wed/Sun → cookable meals only
+// Thu/Fri/Sat     → PREFER aspirational (missing ingredients), fall back to cookable
 app.get('/api/meal-plan/generate', async (req, res) => {
   try {
-    const lunchMeals = await getCookableMeals('lunch');
-    const dinnerMeals = await getCookableMeals('dinner');
+    const lunchAll = await getAllMealsWithStockInfo('lunch');
+    const dinnerAll = await getAllMealsWithStockInfo('dinner');
 
-    const usedIds = new Set();
+    const lunchCookable     = shuffle(lunchAll.filter(m =>  m.cookable));
+    const dinnerCookable    = shuffle(dinnerAll.filter(m =>  m.cookable));
+    const lunchAspirational = shuffle(lunchAll.filter(m => !m.cookable));
+    const dinnerAspirational= shuffle(dinnerAll.filter(m => !m.cookable));
+
+    // Favorites bubble to the front within each bucket
+    const favFirst = arr => [
+      ...arr.filter(m => m.is_favorite),
+      ...arr.filter(m => !m.is_favorite),
+    ];
+
+    const ASPIRATIONAL_DAYS = new Set([3, 4, 5]); // Thu=3, Fri=4, Sat=5
+
+    // Shared count across both lunch and dinner — max 2 uses per meal per week
+    const usedCount = new Map(); // meal.id → number of times placed this week
+    const canUse   = (m) => (usedCount.get(m.id) || 0) < 2;
+    const markUsed = (m) => { if (m) usedCount.set(m.id, (usedCount.get(m.id) || 0) + 1); };
+
+    // Pick an available meal from pool (respecting the 2-use cap).
+    // Fallback: if every meal is at the cap, pick the least-used one.
+    const pickFrom = (pool) => {
+      const available = pool.filter(canUse);
+      if (available.length > 0) return available[Math.floor(Math.random() * available.length)];
+      // All at cap — pick least-used to spread repeats as evenly as possible
+      if (pool.length === 0) return null;
+      const sorted = [...pool].sort((a, b) => (usedCount.get(a.id) || 0) - (usedCount.get(b.id) || 0));
+      return sorted[0];
+    };
+
     const plan = [];
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-    // Helper: shuffle favorites first, then non-favorites
-    const sortAndShuffle = (meals) => {
-      const favs = shuffle(meals.filter(m => !!m.is_favorite));
-      const nonFavs = shuffle(meals.filter(m => !m.is_favorite));
-      return [...favs, ...nonFavs];
-    };
-
-    const prioritizedLunch = sortAndShuffle(lunchMeals);
-    const prioritizedDinner = sortAndShuffle(dinnerMeals);
-
     for (let i = 0; i < 7; i++) {
-      // Pick lunch: try unused first, fallback to random cookable if none unused left
-      let lunch = prioritizedLunch.find(m => !usedIds.has(m.id));
-      if (!lunch && prioritizedLunch.length > 0) {
-        lunch = prioritizedLunch[Math.floor(Math.random() * prioritizedLunch.length)];
-      }
-      if (lunch) usedIds.add(lunch.id);
+      const isAspirationalDay = ASPIRATIONAL_DAYS.has(i);
+      let lunch, dinner;
 
-      // Pick dinner: try unused first, fallback to random cookable if none unused left
-      let dinner = prioritizedDinner.find(m => !usedIds.has(m.id));
-      if (!dinner && prioritizedDinner.length > 0) {
-        dinner = prioritizedDinner[Math.floor(Math.random() * prioritizedDinner.length)];
+      if (isAspirationalDay) {
+        // Thu/Fri/Sat: try an aspirational meal first; fall back to cookable
+        lunch  = pickFrom(favFirst(lunchAspirational))
+              ?? pickFrom(favFirst(lunchCookable));
+        dinner = pickFrom(favFirst(dinnerAspirational))
+              ?? pickFrom(favFirst(dinnerCookable));
+      } else {
+        // Mon/Tue/Wed/Sun: cookable only
+        lunch  = pickFrom(favFirst(lunchCookable));
+        dinner = pickFrom(favFirst(dinnerCookable));
       }
-      if (dinner) usedIds.add(dinner.id);
+
+      markUsed(lunch);
+      markUsed(dinner);
 
       plan.push({
         day: days[i],
-        lunch: lunch ? { ...lunch, slot: 'lunch' } : null,
+        isAspirationalDay,
+        lunch:  lunch  ? { ...lunch,  slot: 'lunch'  } : null,
         dinner: dinner ? { ...dinner, slot: 'dinner' } : null,
       });
     }
@@ -296,24 +323,42 @@ app.get('/api/meal-plan/generate', async (req, res) => {
   }
 });
 
-// GET /api/meal-plan/swap?slot=lunch|dinner&exclude=1,2,3
+// GET /api/meal-plan/swap?slot=lunch|dinner&exclude=1,2,3&aspirational=0|1
+// aspirational=1 → PREFER non-cookable meals, fall back to cookable (for Thu–Sat)
+// aspirational=0 → cookable meals only (Mon–Wed, Sun)
 app.get('/api/meal-plan/swap', async (req, res) => {
   try {
-    const { slot, exclude = '' } = req.query;
+    const { slot, exclude = '', aspirational = '0' } = req.query;
     const excludeIds = new Set(exclude.split(',').filter(Boolean).map(Number));
     const typeFilter = slot === 'lunch' ? 'lunch' : 'dinner';
 
-    const cookable = await getCookableMeals(typeFilter);
-    if (cookable.length === 0) return res.json(null);
+    const allMeals = await getAllMealsWithStockInfo(typeFilter);
 
-    let candidates = cookable.filter(m => !excludeIds.has(m.id));
-    if (candidates.length === 0) {
-      // Fallback: all cookable meals are excluded, so just pick any cookable meal
-      candidates = cookable;
+    if (aspirational === '1') {
+      // Prefer aspirational (non-cookable), then fall back to cookable
+      const aspirationalPool = allMeals.filter(m => !m.cookable && !excludeIds.has(m.id));
+      const cookablePool     = allMeals.filter(m =>  m.cookable && !excludeIds.has(m.id));
+      const pool = aspirationalPool.length > 0 ? aspirationalPool : cookablePool;
+
+      // Last resort: ignore exclusions if everything is excluded
+      const candidates = pool.length > 0 ? pool : allMeals.filter(m => !excludeIds.has(m.id));
+      if (candidates.length === 0) return res.json(null);
+      return res.json({ ...candidates[Math.floor(Math.random() * candidates.length)], slot });
+    } else {
+      // Cookable only, but fall back to aspirational if all cookable are already in the plan
+      const cookable = allMeals.filter(m => m.cookable);
+      let candidates = cookable.filter(m => !excludeIds.has(m.id));
+      if (candidates.length === 0) {
+        // All cookable meals are already in the plan — try aspirational
+        candidates = allMeals.filter(m => !m.cookable && !excludeIds.has(m.id));
+      }
+      if (candidates.length === 0) {
+        // Last resort: repeat any cookable meal
+        candidates = cookable;
+      }
+      if (candidates.length === 0) return res.json(null);
+      return res.json({ ...candidates[Math.floor(Math.random() * candidates.length)], slot });
     }
-
-    const pick = candidates[Math.floor(Math.random() * candidates.length)];
-    res.json({ ...pick, slot });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

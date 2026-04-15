@@ -1,7 +1,11 @@
 #!/bin/bash
 echo "Starting Meal Planner..."
-cd "/Users/Komal/Documents/meal-planner"
-export PATH="/Users/Komal/.local/node/bin:$PATH"
+# Automatically locate the meal-planner directory relative to this script
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$DIR"
+
+# Use Homebrew Node (where Node is installed on this machine)
+export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
 
 # Prevent port conflicts by killing previous sessions if they exist
 pkill -f "node server/server.js"
