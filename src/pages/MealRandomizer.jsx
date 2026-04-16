@@ -177,6 +177,28 @@ export default function MealRandomizer() {
         >
           {loading ? 'Generating...' : plan ? 'Regenerate Plan' : 'Generate Meal Plan'}
         </button>
+        {plan && (
+          <button
+            className="btn btn-secondary"
+            onClick={async () => {
+              try {
+                const res = await fetch('/api/meal-plan/current');
+                const dbPlan = await res.json();
+                if (dbPlan) {
+                  setPlan(dbPlan);
+                  showToast('Plan refreshed');
+                } else {
+                  showToast('No saved plan found');
+                }
+              } catch (_) {
+                showToast('Refresh failed');
+              }
+            }}
+            id="refresh-plan-btn"
+          >
+            ↻ Refresh
+          </button>
+        )}
         {planLoaded && !plan && (
           <span className="generate-subtitle">
             Mon–Wed uses your pantry. Thu–Sat suggests meals worth shopping for.
