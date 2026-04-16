@@ -950,6 +950,17 @@ label {
   width: 100%;
 }
 
+.grocery-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.grocery-list-header h3 {
+  margin: 0;
+}
+
 .grocery-list h3 {
   font-family: 'Playfair Display', serif;
   font-size: 1.1rem;

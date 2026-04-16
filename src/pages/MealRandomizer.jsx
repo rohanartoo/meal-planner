@@ -299,7 +299,30 @@ export default function MealRandomizer() {
 
             {showGrocery && groceryList.length > 0 && (
               <div className="grocery-list glass-card">
-                <h3>🛒 Grocery List</h3>
+                <div className="grocery-list-header">
+                  <h3>🛒 Grocery List</h3>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={async () => {
+                      const text = groceryList.join('\n');
+                      if (navigator.share) {
+                        try {
+                          await navigator.share({ title: 'Grocery List', text });
+                          return;
+                        } catch (_) {}
+                      }
+                      try {
+                        await navigator.clipboard.writeText(text);
+                        showToast('Copied to clipboard!');
+                      } catch (_) {
+                        showToast('Could not copy');
+                      }
+                    }}
+                    title="Share or copy grocery list"
+                  >
+                    Share
+                  </button>
+                </div>
                 <p className="grocery-subtitle">
                   These ingredients are missing from your pantry and needed for meals in your plan.
                 </p>
