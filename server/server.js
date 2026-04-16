@@ -402,6 +402,9 @@ app.get('/api/meal-plan/swap', async (req, res) => {
   }
 });
 
+// Keep-alive ping — prevents Render free tier from spinning down
+app.get('/api/ping', (req, res) => res.json({ ok: true }));
+
 // SPA fallback — serve index.html for non-API routes in production
 app.get('{*path}', (req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));
@@ -409,4 +412,18 @@ app.get('{*path}', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`🚀 Meal Planner API running on http://localhost:${PORT}`);
+
+  // Keep-alive: ping self every 14 minutes to prevent Render free tier spin-down
+  if (process.env.RENDER_EXTERNAL_URL) {
+    const pingUrl = `${process.env.RENDER_EXTERNAL_URL}/api/ping`;
+    console.log(`🔔 Keep-alive enabled — pinging ${pingUrl} every 14 minutes`);
+    setInterval(async () => {
+      try {
+        const res = await fetch(pingUrl);
+        console.log(`✅ Keep-alive ping OK (${res.status})`);
+      } catch (e) {
+        console.error(`❌ Keep-alive ping failed: ${e.message}`);
+      }
+    }, 14 * 60 * 1000);
+  }
 });

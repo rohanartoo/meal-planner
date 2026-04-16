@@ -19,6 +19,7 @@ export default function App() {
     localStorage.setItem('nourish_darkMode', darkMode);
   }, [darkMode]);
 
+
   return (
     <BrowserRouter>
       <div className="app-layout">
