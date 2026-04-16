@@ -582,6 +582,18 @@ label {
 }
 
 /* ── Meal Randomizer Page ────────────────────────────────────────── */
+.refresh-plan-btn {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 100;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+.refresh-plan-btn:hover {
+  opacity: 1;
+}
+
 .randomizer-container {
   display: flex;
   flex-direction: column;

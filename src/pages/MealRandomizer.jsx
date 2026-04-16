@@ -74,6 +74,10 @@ export default function MealRandomizer() {
   }
 
   async function generatePlan() {
+    if (planRef.current) {
+      const confirmed = window.confirm('This will replace the shared plan for everyone. Are you sure?');
+      if (!confirmed) return;
+    }
     setLoading(true);
     try {
       const res = await fetch('/api/meal-plan/generate');
@@ -167,6 +171,30 @@ export default function MealRandomizer() {
         <h1>Weekly Menu</h1>
         <p>Curate your randomized meal plan based on pantry availability</p>
       </div>
+
+      {plan && (
+        <button
+          className="btn btn-secondary btn-sm refresh-plan-btn"
+          onClick={async () => {
+            try {
+              const res = await fetch('/api/meal-plan/current');
+              const dbPlan = await res.json();
+              if (dbPlan) {
+                setPlan(dbPlan);
+                showToast('Plan refreshed');
+              } else {
+                showToast('No saved plan found');
+              }
+            } catch (_) {
+              showToast('Refresh failed');
+            }
+          }}
+          id="refresh-plan-btn"
+          title="Sync latest plan"
+        >
+          ↻
+        </button>
+      )}
 
       <div className="generate-section">
         <button
