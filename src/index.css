@@ -46,6 +46,36 @@
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* ── Dark Mode ───────────────────────────────────────────────────── */
+html.dark {
+  --bg-primary: #1A1E1A;
+  --bg-secondary: #252C23;
+  --bg-card: #252C23;
+  --bg-card-hover: #2E362B;
+  --bg-glass: rgba(255, 255, 255, 0.03);
+  --bg-input: #2E362B;
+  --border-glass: rgba(255, 255, 255, 0.08);
+  --border-focus: rgba(180, 95, 68, 0.6);
+
+  --text-primary: #EAE7E2;
+  --text-secondary: #A8B09F;
+  --text-muted: #6B7566;
+
+  --accent: #C97A5A;
+  --accent-hover: #B56A4A;
+  --accent-glow: rgba(201, 122, 90, 0.2);
+  --success: #7A9B68;
+  --success-bg: rgba(122, 155, 104, 0.15);
+  --danger: #C96B5A;
+  --danger-bg: rgba(201, 107, 90, 0.15);
+
+  --lunch-bg: rgba(163, 124, 64, 0.15);
+  --dinner-bg: rgba(140, 76, 56, 0.15);
+}
+
+html.dark .meal-tile.lunch-tile  { background: #2E2A1E; }
+html.dark .meal-tile.dinner-tile { background: #2A2119; }
+
 html, body, #root {
   height: 100%;
   font-family: 'Lato', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -130,6 +160,29 @@ html, body, #root {
   font-size: 1.2rem;
   width: 24px;
   text-align: center;
+}
+
+.dark-mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  color: #C3C8BC;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.92rem;
+  width: 100%;
+  text-align: left;
+  transition: all 0.2s var(--ease);
+  margin-top: auto;
+}
+
+.dark-mode-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #FFFFFF;
 }
 
 /* ── Main content ────────────────────────────────────────────────── */
@@ -1256,10 +1309,12 @@ label {
     padding: 20px 10px;
   }
   .sidebar-logo span,
-  .sidebar a span:not(.sidebar-icon) {
+  .sidebar a span:not(.sidebar-icon),
+  .dark-mode-toggle span:not(.sidebar-icon) {
     display: none;
   }
-  .sidebar a {
+  .sidebar a,
+  .dark-mode-toggle {
     justify-content: center;
     padding: 12px;
   }
@@ -1324,6 +1379,22 @@ label {
 
   .sidebar .sidebar-icon {
     font-size: 1.3rem;
+  }
+
+  .dark-mode-toggle {
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 12px;
+    font-size: 0.7rem;
+    border-radius: 0;
+    flex: 1;
+    justify-content: center;
+    align-items: center;
+    margin-top: 0;
+  }
+
+  .dark-mode-toggle span:last-child {
+    font-size: 0.7rem;
   }
 
   .main-content {
