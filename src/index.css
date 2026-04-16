@@ -646,6 +646,53 @@ label {
   margin-top: 12px;
 }
 
+/* Mobile day cards — hidden on desktop, shown on mobile */
+.meal-grid--mobile {
+  display: none;
+}
+
+.day-card {
+  background: var(--bg-glass);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.day-card-header {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.day-card-slot {
+  margin-bottom: 10px;
+}
+
+.day-card-slot:last-child {
+  margin-bottom: 0;
+}
+
+.day-card-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.day-card .meal-tile {
+  width: 100%;
+  max-width: 100%;
+  min-width: unset;
+  min-height: 80px;
+}
+
 .grid-header {
   display: grid;
   grid-template-columns: 80px repeat(7, 1fr);
@@ -901,6 +948,17 @@ label {
 
 .grocery-list {
   width: 100%;
+}
+
+.grocery-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.grocery-list-header h3 {
+  margin: 0;
 }
 
 .grocery-list h3 {
@@ -1278,36 +1336,13 @@ label {
     font-size: 1.5rem;
   }
 
-  /* Meal grid: horizontal scroll per row */
-  .meal-grid {
-    overflow: visible;
-  }
-
-  .grid-header {
+  /* Hide desktop grid, show mobile day cards */
+  .meal-grid--desktop {
     display: none;
   }
 
-  .grid-row {
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 8px;
-    margin-bottom: 16px;
-  }
-
-  .grid-row-label {
-    min-width: 50px;
-    font-size: 0.72rem;
-  }
-
-  .meal-tile {
-    min-width: 140px;
-    max-width: 160px;
-    flex-shrink: 0;
-    scroll-snap-align: start;
-    min-height: 90px;
+  .meal-grid--mobile {
+    display: block;
   }
 
   .meal-tile .swap-btn {

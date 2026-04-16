@@ -214,7 +214,8 @@ export default function MealRandomizer() {
 
       {plan && (
         <>
-          <div className="meal-grid">
+          {/* Desktop grid */}
+          <div className="meal-grid meal-grid--desktop">
             {/* Day headers */}
             <div className="grid-header">
               <div /> {/* spacer for row label column */}
@@ -254,6 +255,35 @@ export default function MealRandomizer() {
             </div>
           </div>
 
+          {/* Mobile day cards */}
+          <div className="meal-grid--mobile">
+            {plan.map((day, i) => (
+              <div key={i} className="day-card">
+                <div className="day-card-header">{DAYS[i]}</div>
+                <div className="day-card-slot">
+                  <div className="day-card-label">Lunch</div>
+                  <MealTile
+                    meal={day.lunch}
+                    slot="lunch"
+                    onSwap={() => handleSwap(i, 'lunch')}
+                    isLocked={lockedSlots.has(`${i}-lunch`)}
+                    onToggleLock={() => handleToggleLock(i, 'lunch')}
+                  />
+                </div>
+                <div className="day-card-slot">
+                  <div className="day-card-label">Dinner</div>
+                  <MealTile
+                    meal={day.dinner}
+                    slot="dinner"
+                    onSwap={() => handleSwap(i, 'dinner')}
+                    isLocked={lockedSlots.has(`${i}-dinner`)}
+                    onToggleLock={() => handleToggleLock(i, 'dinner')}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
           {/* Grocery list — only items missing from pantry */}
           <div className="grocery-section">
             <button
@@ -269,7 +299,30 @@ export default function MealRandomizer() {
 
             {showGrocery && groceryList.length > 0 && (
               <div className="grocery-list glass-card">
-                <h3>🛒 Grocery List</h3>
+                <div className="grocery-list-header">
+                  <h3>🛒 Grocery List</h3>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={async () => {
+                      const text = groceryList.join('\n');
+                      if (navigator.share) {
+                        try {
+                          await navigator.share({ title: 'Grocery List', text });
+                          return;
+                        } catch (_) {}
+                      }
+                      try {
+                        await navigator.clipboard.writeText(text);
+                        showToast('Copied to clipboard!');
+                      } catch (_) {
+                        showToast('Could not copy');
+                      }
+                    }}
+                    title="Share or copy grocery list"
+                  >
+                    Share
+                  </button>
+                </div>
                 <p className="grocery-subtitle">
                   These ingredients are missing from your pantry and needed for meals in your plan.
                 </p>
