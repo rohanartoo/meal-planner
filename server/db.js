@@ -63,6 +63,13 @@ if (isPostgres) {
       PRIMARY KEY (meal_id, ingredient_id)
     )
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS current_plan (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      plan_json TEXT NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
 
   console.log('✅ Connected to PostgreSQL');
 
@@ -120,6 +127,13 @@ if (isPostgres) {
       meal_id INTEGER REFERENCES meals(id) ON DELETE CASCADE,
       ingredient_id INTEGER REFERENCES ingredients(id) ON DELETE CASCADE,
       PRIMARY KEY (meal_id, ingredient_id)
+    )
+  `);
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS current_plan (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      plan_json TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
 

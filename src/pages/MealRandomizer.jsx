@@ -8,14 +8,8 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 const ASPIRATIONAL_DAY_INDICES = new Set([3, 4, 5]);
 
 export default function MealRandomizer() {
-  const [plan, setPlan] = useState(() => {
-    try {
-      const saved = localStorage.getItem('mealPlanner_currentPlan');
-      return saved ? JSON.parse(saved) : null;
-    } catch (e) {
-      return null;
-    }
-  });
+  const [plan, setPlan] = useState(null);
+  const [planLoaded, setPlanLoaded] = useState(false);
   const [lockedSlots, setLockedSlots] = useState(() => {
     try {
       const saved = localStorage.getItem('mealPlanner_lockedSlots');
@@ -27,6 +21,34 @@ export default function MealRandomizer() {
   const [loading, setLoading] = useState(false);
   const [showGrocery, setShowGrocery] = useState(false);
   const { toast, isError, showToast } = useToast();
+
+  // On mount: load plan from DB (shared across devices), fall back to localStorage
+  useEffect(() => {
+    async function loadPlan() {
+      try {
+        const res = await fetch('/api/meal-plan/current');
+        const dbPlan = await res.json();
+        if (dbPlan) {
+          setPlan(dbPlan);
+          localStorage.setItem('mealPlanner_currentPlan', JSON.stringify(dbPlan));
+        } else {
+          try {
+            const saved = localStorage.getItem('mealPlanner_currentPlan');
+            if (saved) setPlan(JSON.parse(saved));
+          } catch (_) {}
+        }
+      } catch (_) {
+        // Network error — fall back to localStorage silently
+        try {
+          const saved = localStorage.getItem('mealPlanner_currentPlan');
+          if (saved) setPlan(JSON.parse(saved));
+        } catch (__) {}
+      } finally {
+        setPlanLoaded(true);
+      }
+    }
+    loadPlan();
+  }, []);
 
   useEffect(() => {
     if (plan) {
@@ -57,13 +79,19 @@ export default function MealRandomizer() {
       const res = await fetch('/api/meal-plan/generate');
       const data = await res.json();
       // Preserve locked meals from the previous plan
-      setPlan(prev => {
-        if (!prev) return data;
-        return data.map((day, i) => ({
-          lunch: lockedSlots.has(`${i}-lunch`) && prev[i]?.lunch ? prev[i].lunch : day.lunch,
-          dinner: lockedSlots.has(`${i}-dinner`) && prev[i]?.dinner ? prev[i].dinner : day.dinner,
-        }));
-      });
+      const prev = planRef.current;
+      const finalPlan = !prev ? data : data.map((day, i) => ({
+        ...day,
+        lunch:  lockedSlots.has(`${i}-lunch`)  && prev[i]?.lunch  ? prev[i].lunch  : day.lunch,
+        dinner: lockedSlots.has(`${i}-dinner`) && prev[i]?.dinner ? prev[i].dinner : day.dinner,
+      }));
+      setPlan(finalPlan);
+      // Persist the locked-override version to DB so all devices see the same plan
+      fetch('/api/meal-plan/current', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(finalPlan),
+      }).catch(() => {});
     } catch (e) {
       showToast('Failed to generate plan');
     }
@@ -101,11 +129,16 @@ export default function MealRandomizer() {
         return;
       }
 
-      setPlan(prev => {
-        const updated = [...prev];
-        updated[dayIndex] = { ...updated[dayIndex], [slot]: newMeal };
-        return updated;
-      });
+      const updatedPlan = planRef.current.map((day, i) =>
+        i === dayIndex ? { ...day, [slot]: newMeal } : day
+      );
+      setPlan(updatedPlan);
+      // Persist to DB so all devices see the swap
+      fetch('/api/meal-plan/current', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedPlan),
+      }).catch(() => {});
     } catch (e) {
       showToast('Swap failed');
     }
@@ -144,7 +177,7 @@ export default function MealRandomizer() {
         >
           {loading ? 'Generating...' : plan ? 'Regenerate Plan' : 'Generate Meal Plan'}
         </button>
-        {!plan && (
+        {planLoaded && !plan && (
           <span className="generate-subtitle">
             Mon–Wed uses your pantry. Thu–Sat suggests meals worth shopping for.
           </span>
