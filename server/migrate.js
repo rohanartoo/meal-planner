@@ -61,6 +61,13 @@ async function migrate() {
         PRIMARY KEY (meal_id, ingredient_id)
       )
     `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS current_plan (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        plan_json TEXT NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
 
     // ── Migrate ingredients ──────────────────────────────────────────
     const ingredients = sqlite.prepare('SELECT * FROM ingredients').all();

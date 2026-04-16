@@ -250,6 +250,43 @@ function shuffle(arr) {
   return a;
 }
 
+// Persist the current plan as a single shared row (id=1 always)
+async function savePlan(plan) {
+  const json = JSON.stringify(plan);
+  const now = new Date().toISOString();
+  await db.run(
+    `INSERT INTO current_plan (id, plan_json, updated_at)
+     VALUES (1, $1, $2)
+     ON CONFLICT (id) DO UPDATE SET plan_json = $1, updated_at = $2`,
+    [json, now]
+  );
+}
+
+// GET /api/meal-plan/current — return the shared plan (or null)
+app.get('/api/meal-plan/current', async (req, res) => {
+  try {
+    const row = await db.get('SELECT plan_json FROM current_plan WHERE id = 1');
+    if (!row) return res.json(null);
+    res.json(JSON.parse(row.plan_json));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/meal-plan/current — save the full plan from the frontend
+app.post('/api/meal-plan/current', async (req, res) => {
+  try {
+    const plan = req.body;
+    if (!Array.isArray(plan) || plan.length !== 7) {
+      return res.status(400).json({ error: 'Invalid plan format' });
+    }
+    await savePlan(plan);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // GET /api/meal-plan/generate
 // Mon/Tue/Wed/Sun → cookable meals only
 // Thu/Fri/Sat     → PREFER aspirational (missing ingredients), fall back to cookable
@@ -317,6 +354,7 @@ app.get('/api/meal-plan/generate', async (req, res) => {
       });
     }
 
+    await savePlan(plan);
     res.json(plan);
   } catch (e) {
     res.status(500).json({ error: e.message });
