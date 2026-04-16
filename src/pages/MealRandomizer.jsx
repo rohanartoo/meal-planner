@@ -214,7 +214,8 @@ export default function MealRandomizer() {
 
       {plan && (
         <>
-          <div className="meal-grid">
+          {/* Desktop grid */}
+          <div className="meal-grid meal-grid--desktop">
             {/* Day headers */}
             <div className="grid-header">
               <div /> {/* spacer for row label column */}
@@ -252,6 +253,35 @@ export default function MealRandomizer() {
                 />
               ))}
             </div>
+          </div>
+
+          {/* Mobile day cards */}
+          <div className="meal-grid--mobile">
+            {plan.map((day, i) => (
+              <div key={i} className="day-card">
+                <div className="day-card-header">{DAYS[i]}</div>
+                <div className="day-card-slot">
+                  <div className="day-card-label">Lunch</div>
+                  <MealTile
+                    meal={day.lunch}
+                    slot="lunch"
+                    onSwap={() => handleSwap(i, 'lunch')}
+                    isLocked={lockedSlots.has(`${i}-lunch`)}
+                    onToggleLock={() => handleToggleLock(i, 'lunch')}
+                  />
+                </div>
+                <div className="day-card-slot">
+                  <div className="day-card-label">Dinner</div>
+                  <MealTile
+                    meal={day.dinner}
+                    slot="dinner"
+                    onSwap={() => handleSwap(i, 'dinner')}
+                    isLocked={lockedSlots.has(`${i}-dinner`)}
+                    onToggleLock={() => handleToggleLock(i, 'dinner')}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Grocery list — only items missing from pantry */}
