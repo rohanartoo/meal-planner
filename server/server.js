@@ -402,6 +402,9 @@ app.get('/api/meal-plan/swap', async (req, res) => {
   }
 });
 
+// Keep-alive ping — prevents Render free tier from spinning down
+app.get('/api/ping', (req, res) => res.json({ ok: true }));
+
 // SPA fallback — serve index.html for non-API routes in production
 app.get('{*path}', (req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));
