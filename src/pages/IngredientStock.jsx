@@ -84,7 +84,7 @@ export default function IngredientStock() {
     newName.trim() && ing.name.toLowerCase().includes(newName.toLowerCase())
   ).slice(0, 8);
 
-  function handleKeyDown(e) {
+  async function handleKeyDown(e) {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setActiveIndex(p => Math.min(p + 1, suggestions.length - 1));
