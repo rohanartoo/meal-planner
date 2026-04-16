@@ -19,11 +19,6 @@ export default function App() {
     localStorage.setItem('nourish_darkMode', darkMode);
   }, [darkMode]);
 
-  // Ping the server every 14 minutes to prevent Render free tier spin-down
-  useEffect(() => {
-    const id = setInterval(() => fetch('/api/ping').catch(() => {}), 14 * 60 * 1000);
-    return () => clearInterval(id);
-  }, []);
 
   return (
     <BrowserRouter>

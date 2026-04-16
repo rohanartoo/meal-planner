@@ -412,4 +412,18 @@ app.get('{*path}', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`🚀 Meal Planner API running on http://localhost:${PORT}`);
+
+  // Keep-alive: ping self every 14 minutes to prevent Render free tier spin-down
+  if (process.env.RENDER_EXTERNAL_URL) {
+    const pingUrl = `${process.env.RENDER_EXTERNAL_URL}/api/ping`;
+    console.log(`🔔 Keep-alive enabled — pinging ${pingUrl} every 14 minutes`);
+    setInterval(async () => {
+      try {
+        const res = await fetch(pingUrl);
+        console.log(`✅ Keep-alive ping OK (${res.status})`);
+      } catch (e) {
+        console.error(`❌ Keep-alive ping failed: ${e.message}`);
+      }
+    }, 14 * 60 * 1000);
+  }
 });
