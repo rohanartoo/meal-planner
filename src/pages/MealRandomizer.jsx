@@ -74,6 +74,10 @@ export default function MealRandomizer() {
   }
 
   async function generatePlan() {
+    if (planRef.current) {
+      const confirmed = window.confirm('This will replace the shared plan for everyone. Are you sure?');
+      if (!confirmed) return;
+    }
     setLoading(true);
     try {
       const res = await fetch('/api/meal-plan/generate');
